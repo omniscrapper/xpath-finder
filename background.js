@@ -78,14 +78,14 @@ browserAppData.browserAction.onClicked.addListener(toggle);
 // It is not possible to do that from content scripts anymore.
 chrome.runtime.onMessage.addListener(
   function(request, sender, sendResponse) {
-    if (request.contentScriptQuery == "querySchemas") {
+    if (request.contentScriptQuery == "queryGraphQl") {
       fetch('http://localhost:2300/api/public/graphql', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
         },
-        body: JSON.stringify({query: "{ schemas { id }}"})
+        body: JSON.stringify({query: request.query})
       })
       .then(r => r.json())
       .then(data => sendResponse(data));
