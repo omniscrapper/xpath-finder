@@ -1,5 +1,6 @@
 /* globals chrome */
 var xPathFinder = xPathFinder || (() => {
+
   class Inspector {
     constructor() {
       this.win = window;
@@ -23,10 +24,10 @@ var xPathFinder = xPathFinder || (() => {
         this.XPath = XPath;
         const contentNode = document.getElementById(this.contentNode);
         if (contentNode) {
-          contentNode.innerText = XPath;
+          contentNode.innerText = "LOLKEK" + XPath;
         } else {
           const contentHtml = document.createElement('div');
-          contentHtml.innerText = XPath;
+          contentHtml.innerText = "LOLKEK2" + XPath;
           contentHtml.id = this.contentNode;
           document.body.appendChild(contentHtml);
         }
