@@ -3,6 +3,7 @@ var omniScrapperTask = omniScrapperTask || (() => {
     constructor() {
       this.site = window.location.hostname;
       this.schemas = [];
+      this.definition = {};
 
       chrome.runtime.sendMessage(
         {contentScriptQuery: "queryGraphQl", query: "{ schemas { id definition name }}"},
@@ -23,7 +24,19 @@ var omniScrapperTask = omniScrapperTask || (() => {
         this.modal().toggle();
       } else {
         this.createModal();
-        this.modal().append(this.schemasSelect())
+
+        this.modal().append(this.schemasSelectHtml());
+        this.schemaSelect().on('change', () => {
+          this.schemaFields().remove();
+          var id = this.schemaSelect().val();
+          this.modal().append(this.schemaFieldsHtml(id));
+        });
+
+        this.modal().append(
+          this.schemaFieldsHtml(
+            this.task.schemas[0].id
+          )
+        );
       }
     }
 
@@ -43,11 +56,34 @@ var omniScrapperTask = omniScrapperTask || (() => {
       return $("#" + this.taskModalId);
     }
 
-    schemasSelect() {
+    schemasSelectHtml() {
       const options = this.task.schemas.map((v, i, a) => {
         return "<option value=" + v.id + ">" + v.name + "</option>";
       }).join('');
-      return "<select>" + options + "</select>"
+      return "<br/>Schema: <select id='omniscrapper-schema'>" + options + "</select><br/>"
+    }
+
+    schemaSelect() {
+      return $('#omniscrapper-schema');
+    }
+
+    schemaFieldsHtml(schemaId) {
+      var output = "<div id='omniscrapper-schema-fields'>";
+      console.log("ID: " + schemaId);
+      var schema = this.task.schemas.find(e => {
+        return e.id == schemaId
+      }).definition;
+      const definition = JSON.parse(schema);
+
+      for (let [key, value] of Object.entries(definition.properties)) {
+        console.log(`key=${key} value=${value}`)
+        output = output + "<br/>" + key + ": button";
+      }
+      return output + "</div>";
+    }
+
+    schemaFields() {
+      return $('#omniscrapper-schema-fields');
     }
   }
 
