@@ -17,6 +17,7 @@ var omniScrapperTask = omniScrapperTask || (() => {
       this.task = task;
       this.taskModalId = 'omniscrapper-task';
       this.modalStyles = `*{cursor:crosshair!important;}#omniscrapper-task{bottom:100px; cursor:initial!important;padding:10px;background:gray;color:white;position:fixed;font-size:14px;z-index:10000001;}`;
+      this.components = {}
     }
 
     toggle() {
@@ -27,13 +28,17 @@ var omniScrapperTask = omniScrapperTask || (() => {
 
         this.modal().append(this.schemasSelectHtml());
         this.schemaSelect().on('change', () => {
-          this.schemaFields().remove();
+          this.components.schemaFields.node().remove();
           var id = this.schemaSelect().val();
-          this.modal().append(this.schemaFieldsHtml(id));
+          this.modal().append(this.components.schemaFields.html(id));
+        });
+
+        this.components.schemaFields.node().find('button').on('click', (e) => {
+          console.log('Click ' + e);
         });
 
         this.modal().append(
-          this.schemaFieldsHtml(
+          this.components.schemaFields.html(
             this.task.schemas[0].id
           )
         );
@@ -66,29 +71,41 @@ var omniScrapperTask = omniScrapperTask || (() => {
     schemaSelect() {
       return $('#omniscrapper-schema');
     }
+  }
 
-    schemaFieldsHtml(schemaId) {
+  class SchemaFields {
+    constructor(task) {
+      this.task = task;
+    }
+
+    html(schemaId) {
       var output = "<div id='omniscrapper-schema-fields'>";
-      console.log("ID: " + schemaId);
       var schema = this.task.schemas.find(e => {
         return e.id == schemaId
       }).definition;
       const definition = JSON.parse(schema);
 
       for (let [key, value] of Object.entries(definition.properties)) {
-        console.log(`key=${key} value=${value}`)
-        output = output + "<br/>" + key + ": button";
+        output = output
+          + "<div id='" + key + "'>"
+          + "<span>" + key + "</span>"
+          + "<button>pick</button>"
+          + "</div>";
       }
       return output + "</div>";
     }
 
-    schemaFields() {
+    node() {
       return $('#omniscrapper-schema-fields');
     }
   }
 
   this.task = new Task();
   this.taskModal = new TaskModal(this.task);
+  this.schemaFields = new SchemaFields(this.task);
+
+  this.taskModal.components['schemaFields'] = this.schemaFields;
+  console.log(this.taskModal.components);
 
   chrome.runtime.onMessage.addListener(request => {
     if (request.action === 'toggle-omniscrapper-task') {
