@@ -42,7 +42,7 @@ var omniScrapperTask = omniScrapperTask || (() => {
     }
 
     register(componentClass) {
-      const component = new componentClass(this.node(), this.task);
+      const component = new componentClass(this, this.task);
       this.components.push(component);
     }
 
@@ -89,11 +89,11 @@ var omniScrapperTask = omniScrapperTask || (() => {
 
     render() {
       this.node().remove();
-      this.container.append(this.html());
+      this.container.node().append(this.html());
     }
 
     node() {
-      return this.container.find('#' + this.id);
+      return this.container.node().find('#' + this.id);
     }
   }
 
@@ -106,7 +106,8 @@ var omniScrapperTask = omniScrapperTask || (() => {
 
     render() {
       this.node().remove();
-      this.container.append(this.html());
+      this.container.node().append(this.html());
+      this.selectNode().val(this.task.schemaId);
       this.setListeners();
     }
 
@@ -114,20 +115,22 @@ var omniScrapperTask = omniScrapperTask || (() => {
       const options = this.task.schemas.map((v, i, a) => {
         return "<option value=" + v.id + ">" + v.name + "</option>";
       }).join('');
-      return "<br/>Schema: <select id='" + this.id + "'>" + options + "</select><br/>"
+      return "<div id='" + this.id + "'>Schema: <select>" + options + "</select></div>"
     }
 
     setListeners() {
-      this.node().on('change', () => {
-        console.log('Select is changed');
-        //this.task.schemaId = this.components.schemaSelect.node().val();
-        //this.components.schemaFields.node().remove();
-        //this.node().append(this.components.schemaFields.html());
+      this.selectNode().on('change', () => {
+        this.task.schemaId = this.selectNode().val();
+        this.container.render();
       });
     }
 
     node() {
-      return this.container.find('#' + this.id);
+      return this.container.node().find('#' + this.id);
+    }
+
+    selectNode() {
+      return this.node().find('select');
     }
   }
 
