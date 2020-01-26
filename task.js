@@ -21,23 +21,23 @@ var omniScrapperTask = omniScrapperTask || (() => {
     }
 
     toggle() {
-      if (this.modal().length > 0) {
-        this.modal().toggle();
+      if (this.node().length > 0) {
+        this.node().toggle();
       } else {
         this.createModal();
 
-        this.modal().append(this.schemasSelectHtml());
-        this.schemaSelect().on('change', () => {
+        this.node().append(this.components.schemaSelect.html());
+        this.components.schemaSelect.node().on('change', () => {
           this.components.schemaFields.node().remove();
-          var id = this.schemaSelect().val();
-          this.modal().append(this.components.schemaFields.html(id));
+          var id = this.components.schemaSelect.node().val();
+          this.node().append(this.components.schemaFields.html(id));
         });
 
         this.components.schemaFields.node().find('button').on('click', (e) => {
           console.log('Click ' + e);
         });
 
-        this.modal().append(
+        this.node().append(
           this.components.schemaFields.html(
             this.task.schemas[0].id
           )
@@ -57,19 +57,8 @@ var omniScrapperTask = omniScrapperTask || (() => {
       document.body.appendChild(contentHtml);
     }
 
-    modal() {
+    node() {
       return $("#" + this.taskModalId);
-    }
-
-    schemasSelectHtml() {
-      const options = this.task.schemas.map((v, i, a) => {
-        return "<option value=" + v.id + ">" + v.name + "</option>";
-      }).join('');
-      return "<br/>Schema: <select id='omniscrapper-schema'>" + options + "</select><br/>"
-    }
-
-    schemaSelect() {
-      return $('#omniscrapper-schema');
     }
   }
 
@@ -100,12 +89,30 @@ var omniScrapperTask = omniScrapperTask || (() => {
     }
   }
 
+  class SchemaSelect {
+    constructor(task) {
+      this.task = task;
+    }
+
+    html() {
+      const options = this.task.schemas.map((v, i, a) => {
+        return "<option value=" + v.id + ">" + v.name + "</option>";
+      }).join('');
+      return "<br/>Schema: <select id='omniscrapper-schema'>" + options + "</select><br/>"
+    }
+
+    node() {
+      return $('#omniscrapper-schema');
+    }
+  }
+
   this.task = new Task();
   this.taskModal = new TaskModal(this.task);
+  this.schemaSelect = new SchemaSelect(this.task);
   this.schemaFields = new SchemaFields(this.task);
 
+  this.taskModal.components['schemaSelect'] = this.schemaSelect;
   this.taskModal.components['schemaFields'] = this.schemaFields;
-  console.log(this.taskModal.components);
 
   chrome.runtime.onMessage.addListener(request => {
     if (request.action === 'toggle-omniscrapper-task') {
