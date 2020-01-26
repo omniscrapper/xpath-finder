@@ -17,16 +17,9 @@
   "content_scripts": [{
     "all_frames": false,
     "matches": ["<all_urls>"],
-    "js":["jquery-3.4.1.min.js", "inspect.js", "task.js"]
+    "js":["jquery-3.4.1.min.js", "task.js"]
   }],
   "commands": {
-    "toggle-xpath": {
-      "suggested_key": {
-        "default": "Ctrl+Shift+U",
-        "mac": "Command+Shift+U"
-      },
-      "description": "Toggle plugin"
-    },
     "toggle-omniscrapper-task": {
       "suggested_key": {
         "default": "Ctrl+Shift+I",
