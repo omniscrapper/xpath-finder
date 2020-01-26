@@ -1,48 +1,49 @@
 var omniScrapperTask = omniScrapperTask || (() => {
   class Task {
-    constructor() {
+    constructor(callback) {
       this.site = window.location.hostname;
       this.schemas = [];
       this.definition = {};
+      this.afterInitializationCallback = callback;
 
       chrome.runtime.sendMessage(
         {contentScriptQuery: "queryGraphQl", query: "{ schemas { id definition name }}"},
-        schemas => { this.schemas = schemas.data.schemas }
+        schemas => { this.setSelectedSchema(schemas) }
       );
+    }
+
+    setSelectedSchema(schemas) {
+      this.schemas = schemas.data.schemas;
+      this.schemaId = this.schemas[0].id;
+      this.afterInitializationCallback(this);
     }
   }
 
   class TaskModal {
-    constructor(task) {
+    constructor(dom, task) {
+      this.dom = dom;
       this.task = task;
-      this.taskModalId = 'omniscrapper-task';
+      this.id = 'omniscrapper-task';
       this.modalStyles = `*{cursor:crosshair!important;}#omniscrapper-task{bottom:100px; cursor:initial!important;padding:10px;background:gray;color:white;position:fixed;font-size:14px;z-index:10000001;}`;
-      this.components = {}
+      this.components = [];
+
+      this.createModal();
+      this.toggle();
     }
 
     toggle() {
-      if (this.node().length > 0) {
-        this.node().toggle();
-      } else {
-        this.createModal();
+      this.node().toggle();
+    }
 
-        this.node().append(this.components.schemaSelect.html());
-        this.components.schemaSelect.node().on('change', () => {
-          this.components.schemaFields.node().remove();
-          var id = this.components.schemaSelect.node().val();
-          this.node().append(this.components.schemaFields.html(id));
-        });
+    render() {
+      this.components.forEach((v, i, a) => {
+        v.render();
+      });
+    }
 
-        this.components.schemaFields.node().find('button').on('click', (e) => {
-          console.log('Click ' + e);
-        });
-
-        this.node().append(
-          this.components.schemaFields.html(
-            this.task.schemas[0].id
-          )
-        );
-      }
+    register(componentClass) {
+      const component = new componentClass(this.node(), this.task);
+      this.components.push(component);
     }
 
     createModal() {
@@ -53,24 +54,26 @@ var omniScrapperTask = omniScrapperTask || (() => {
       const contentHtml = document.createElement('div');
       contentHtml.innerText = this.task.site;
 
-      contentHtml.id = this.taskModalId;
+      contentHtml.id = this.id;
       document.body.appendChild(contentHtml);
     }
 
     node() {
-      return $("#" + this.taskModalId);
+      return this.dom("#" + this.id);
     }
   }
 
   class SchemaFields {
-    constructor(task) {
+    constructor(container, task) {
+      this.container = container;
       this.task = task;
+      this.id = 'omniscrapper-schema-fields';
     }
 
     html(schemaId) {
-      var output = "<div id='omniscrapper-schema-fields'>";
+      var output = "<div id='" + this.id + "'>";
       var schema = this.task.schemas.find(e => {
-        return e.id == schemaId
+        return e.id == this.task.schemaId
       }).definition;
       const definition = JSON.parse(schema);
 
@@ -84,35 +87,62 @@ var omniScrapperTask = omniScrapperTask || (() => {
       return output + "</div>";
     }
 
+    render() {
+      this.node().remove();
+      this.container.append(this.html());
+    }
+
     node() {
-      return $('#omniscrapper-schema-fields');
+      return this.container.find('#' + this.id);
     }
   }
 
   class SchemaSelect {
-    constructor(task) {
+    constructor(container, task) {
+      this.container = container;
       this.task = task;
+      this.id = 'omniscrapper-schema';
+    }
+
+    render() {
+      this.node().remove();
+      this.container.append(this.html());
+      this.setListeners();
     }
 
     html() {
       const options = this.task.schemas.map((v, i, a) => {
         return "<option value=" + v.id + ">" + v.name + "</option>";
       }).join('');
-      return "<br/>Schema: <select id='omniscrapper-schema'>" + options + "</select><br/>"
+      return "<br/>Schema: <select id='" + this.id + "'>" + options + "</select><br/>"
+    }
+
+    setListeners() {
+      this.node().on('change', () => {
+        console.log('Select is changed');
+        //this.task.schemaId = this.components.schemaSelect.node().val();
+        //this.components.schemaFields.node().remove();
+        //this.node().append(this.components.schemaFields.html());
+      });
     }
 
     node() {
-      return $('#omniscrapper-schema');
+      return this.container.find('#' + this.id);
     }
   }
 
-  this.task = new Task();
-  this.taskModal = new TaskModal(this.task);
-  this.schemaSelect = new SchemaSelect(this.task);
-  this.schemaFields = new SchemaFields(this.task);
+  this.dom = $;
+  self = this;
 
-  this.taskModal.components['schemaSelect'] = this.schemaSelect;
-  this.taskModal.components['schemaFields'] = this.schemaFields;
+  this.task = new Task(function(task) {
+    self.taskModal = new TaskModal(self.dom, task);
+    self.taskModal.render();
+
+    self.taskModal.register(SchemaSelect);
+    self.taskModal.register(SchemaFields);
+
+    self.taskModal.render();
+  });
 
   chrome.runtime.onMessage.addListener(request => {
     if (request.action === 'toggle-omniscrapper-task') {
