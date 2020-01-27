@@ -29,6 +29,10 @@ var omniScrapperTask = omniScrapperTask || (() => {
       this.schemaId = this.schemas[0].id;
       this.afterInitializationCallback(this);
     }
+
+    submit() {
+      console.log('submitted');
+    }
   }
 
   class TaskModal {
@@ -36,6 +40,7 @@ var omniScrapperTask = omniScrapperTask || (() => {
       this.dom = dom;
       this.task = task;
       this.id = 'omniscrapper-task';
+      this.submitId = 'submit-task';
       this.modalStyles = `*{cursor:crosshair!important;}#omniscrapper-task{bottom:100px; cursor:initial!important;padding:10px;background:gray;color:white;position:fixed;font-size:14px;z-index:10000001;}`;
       this.components = [];
 
@@ -64,10 +69,19 @@ var omniScrapperTask = omniScrapperTask || (() => {
       document.getElementsByTagName('head')[0].appendChild(styles);
 
       const contentHtml = document.createElement('div');
-      contentHtml.innerText = this.task.site;
 
       contentHtml.id = this.id;
       document.body.appendChild(contentHtml);
+
+      this.node().append(this.html());
+      var self = this;
+      this.node().find('#' + this.submitId).on('click', function() {
+        self.task.submit();
+      });
+    }
+
+    html() {
+      return "<span>" + this.task.site + "</span><button id='submit-task'>Submit</button>";
     }
 
     node() {
