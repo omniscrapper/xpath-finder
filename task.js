@@ -1,15 +1,27 @@
 var omniScrapperTask = omniScrapperTask || (() => {
   class Task {
-    constructor(callback) {
+    constructor(afterInitializationCallback, dataChangedCallback) {
       this.site = window.location.hostname;
       this.schemas = [];
-      this.definition = {};
-      this.afterInitializationCallback = callback;
+      this.afterInitializationCallback = afterInitializationCallback;
+      this.dataChangedCallback = dataChangedCallback;
+      this.latestField = null;
+      this.anchors = {};
 
       chrome.runtime.sendMessage(
         {contentScriptQuery: "queryGraphQl", query: "{ schemas { id definition name }}"},
         schemas => { this.setSelectedSchema(schemas) }
       );
+    }
+
+    setLatestField(value) {
+      this.latestField = value;
+    }
+
+    pushLatestXpath(value) {
+      this.anchors[this.latestField] = value;
+      this.latestField = null;
+      this.dataChangedCallback();
     }
 
     setSelectedSchema(schemas) {
@@ -77,12 +89,22 @@ var omniScrapperTask = omniScrapperTask || (() => {
       }).definition;
       const definition = JSON.parse(schema);
 
+      var self = this;
       for (let [key, value] of Object.entries(definition.properties)) {
-        output = output
-          + "<div id='" + key + "'>"
-          + "<span>" + key + "</span>"
-          + "<button>pick</button>"
-          + "</div>";
+        if (self.task.anchors[key] == undefined) {
+          output = output
+            + "<div id='" + key + "'>"
+            + "<span>" + key + "</span>"
+            + "<button>pick</button>"
+            + "</div>";
+        } else {
+          output = output
+            + "<div id='" + key + "'>"
+            + "<span>" + key + "</span>"
+            + "<input value=" + self.task.anchors[key] +">"
+            + "<button>repick</button>"
+            + "</div>";
+        }
       }
       return output + "</div>";
     }
@@ -99,6 +121,8 @@ var omniScrapperTask = omniScrapperTask || (() => {
 
     setListeners() {
       this.node().find('button').on('click', (e) => {
+        var id = this.container.dom(e.target).parent('div').attr('id');
+        this.task.setLatestField(id);
         inspect.getOptions();
       });
     }
@@ -142,9 +166,11 @@ var omniScrapperTask = omniScrapperTask || (() => {
   }
 
   class Inspector {
-    constructor() {
+    constructor(task) {
       this.win = window;
       this.doc = window.document;
+
+      this.task = task;
 
       this.draw = this.draw.bind(this);
       this.getData = this.getData.bind(this);
@@ -163,17 +189,8 @@ var omniScrapperTask = omniScrapperTask || (() => {
         const XPath = this.getXPath(e.target);
         this.XPath = XPath;
         const contentNode = document.getElementById(this.contentNode);
-        console.log(XPath);
-        console.log(self.taskModal);
+        this.task.pushLatestXpath(XPath);
         this.deactivate();
-        //if (contentNode) {
-          //contentNode.innerText = XPath;
-        //} else {
-          //const contentHtml = document.createElement('div');
-          //contentHtml.innerText = XPath;
-          //contentHtml.id = this.contentNode;
-          //document.body.appendChild(contentHtml);
-        //}
         this.options.clipboard && ( this.copyText(XPath) );
       }
     }
@@ -427,7 +444,6 @@ var omniScrapperTask = omniScrapperTask || (() => {
     }
   }
 
-  const inspect = new Inspector();
 
   this.dom = $;
   self = this;
@@ -440,7 +456,12 @@ var omniScrapperTask = omniScrapperTask || (() => {
     self.taskModal.register(SchemaFields);
 
     self.taskModal.render();
+  },
+  function() {
+    self.taskModal.render();
   });
+
+  const inspect = new Inspector(this.task);
 
   chrome.runtime.onMessage.addListener(request => {
     if (request.action === 'toggle-omniscrapper-task') {
